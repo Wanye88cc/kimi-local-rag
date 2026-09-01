@@ -25,7 +25,7 @@ Practical result: a question with no answer in the index injects **zero** contex
 - Hybrid BM25 (SQLite FTS5) + 384-dim vector search (in-memory cosine, sub-100 ms at 50k chunks)
 - Local ONNX embeddings via Transformers.js — `Xenova/bge-small-en-v1.5` by default (q8, ~35 MB), configurable
 - Many formats: source code, Markdown, JSON/YAML/TOML, text, PDF, DOCX, HTML (auto-converted)
-- Per-project storage at `.kimi-code/rag/` (walk-up resolution), global fallback at `~/.kimi-code/rag/`
+- **Single global index** at `~/.kimi-code/rag/` — index once, search from every project (existing project-local stores are still honored)
 - **Auto-injection** via a `UserPromptSubmit` hook, served by a warm background daemon (model stays loaded; the first prompt after idle falls back to a fast lexical-only pass)
 - **Auto-refresh** of stale indexes (>24 h) on session start, detached and non-blocking
 - **Self-bootstrapping** — dependencies install themselves in the background on first use, no manual `npm install`
@@ -96,11 +96,15 @@ Chinese-heavy content: switch models for better multilingual semantics —
 
 ## Storage
 
+**One global index by default** at `~/.kimi-code/rag/` — everything you index is searchable from everywhere, and `rag_status` always looks at the same place.
+
 | Rule | Location |
 | --- | --- |
 | `$KIMI_RAG_DIR` set | wins over everything |
-| Walk-up from project root finds `.kimi-code/rag/rag.db` | project store |
-| Otherwise | `~/.kimi-code/rag/` (global) |
+| A project store `.kimi-code/rag/rag.db` already exists (created by an older version, or deliberately) | that project store is honored |
+| Otherwise — the default, for reads and writes | `~/.kimi-code/rag/` (global) |
+
+Migrating an old project-local index into the global store: `mv <project>/.kimi-code/rag/* ~/.kimi-code/rag/` — or just re-run `rag-index`, re-embedding is fast once the model is downloaded.
 
 The embedding model cache is shared globally at `~/.kimi-code/rag/models/`.
 
