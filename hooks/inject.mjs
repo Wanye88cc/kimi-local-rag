@@ -81,6 +81,7 @@ async function main() {
   // Fast path: warm daemon (semantic)
   const viaDaemon = await queryDaemon(storeDir, '/inject', { prompt }, 2500);
   if (viaDaemon) {
+    const cfg = store.config;
     store.close();
     if (viaDaemon.text) process.stdout.write(viaDaemon.text + '\n');
     return;
