@@ -1,6 +1,6 @@
 {
   "name": "kimi-local-rag",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Local hybrid RAG (BM25 + vector) plugin for Kimi Code — offline embeddings, relevance-gated auto-injection",
   "type": "module",
   "license": "MIT",

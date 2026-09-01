@@ -38,8 +38,8 @@ function parseArgs(argv) {
   return { args, opts };
 }
 
-function open(opts, forWrite = false) {
-  const dir = resolveStoreDir({ dir: opts.dir, forWrite });
+function open(opts) {
+  const dir = resolveStoreDir({ dir: opts.dir });
   return new RagStore(dir);
 }
 
@@ -52,7 +52,7 @@ async function main() {
   switch (cmd) {
     case 'index': {
       const target = args[0] || '.';
-      const store = open(opts, true);
+      const store = open(opts);
       store.reloadConfig();
       const abs = path.resolve(opts.dir || '.', target);
       if (!store.config.trackedPaths.includes(abs)) {
@@ -123,7 +123,7 @@ async function main() {
     }
 
     case 'rebuild': {
-      const store = open(opts, true);
+      const store = open(opts);
       store.reloadConfig();
       if (opts.force) {
         store.clearAll();
@@ -145,7 +145,7 @@ async function main() {
     }
 
     case 'exclude': {
-      const dir = resolveStoreDir({ dir: opts.dir, forWrite: true });
+      const dir = resolveStoreDir({ dir: opts.dir });
       const cfg = loadConfig(dir);
       const pattern = args[0];
       if (!pattern) {
@@ -162,7 +162,7 @@ async function main() {
     }
 
     case 'config': {
-      const dir = resolveStoreDir({ dir: opts.dir, forWrite: true });
+      const dir = resolveStoreDir({ dir: opts.dir });
       const [key, ...val] = args;
       if (!key) {
         console.log(JSON.stringify(loadConfig(dir), null, 2));

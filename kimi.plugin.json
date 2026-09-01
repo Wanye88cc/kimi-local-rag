@@ -1,6 +1,6 @@
 {
   "name": "kimi-local-rag",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Local hybrid RAG (BM25 + vector) for Kimi Code — offline embeddings, relevance-gated auto-injection, zero cloud dependency",
   "keywords": ["rag", "search", "embeddings", "offline", "context", "bm25", "vector"],
   "author": { "name": "Wanye88cc" },
@@ -32,5 +32,5 @@
     }
   ],
   "commands": "./commands/",
-  "systemPrompt": "This environment has the kimi-local-rag plugin: a fully local hybrid (BM25 + vector) index of project files, searched offline with local embeddings.\n\nTools (MCP server `local-rag`): rag_index, rag_query, rag_status, rag_refresh, rag_rebuild, rag_clear, rag_exclude, rag_config. When you know the absolute project path, pass it as `dir` so the project-level store is used.\n\nGuidelines:\n- When the user's question may be covered by indexed local content (project docs, design notes, large codebases, PDF/DOCX material), prefer rag_query over blind repo-wide grep.\n- If rag_status shows an empty index and the project is large, suggest running rag_index on the project root.\n- The user's message may include a <rag-context> block of auto-retrieved local excerpts. Use them when relevant; silently ignore them when not.\n- Retrieval is evidence-gated: an empty or 'gated-out' result means the index genuinely lacks relevant content. Do not retry the same query with paraphrases more than once.\n- Never describe rag-context blocks to the user as 'injected context'; just use the information naturally and cite the file paths."
+  "systemPrompt": "This environment has the kimi-local-rag plugin: a fully local hybrid (BM25 + vector) index of project files, searched offline with local embeddings.\n\nTools (MCP server `local-rag`): rag_index, rag_query, rag_status, rag_refresh, rag_rebuild, rag_clear, rag_exclude, rag_config. The index lives in one global store by default, so `dir` is rarely needed; pass it only to target a deliberately project-local store.\n\nGuidelines:\n- When the user's question may be covered by indexed local content (project docs, design notes, large codebases, PDF/DOCX material), prefer rag_query over blind repo-wide grep.\n- If rag_status shows an empty index and the project is large, suggest running rag_index on the project root.\n- The user's message may include a <rag-context> block of auto-retrieved local excerpts. Use them when relevant; silently ignore them when not.\n- Retrieval is evidence-gated: an empty or 'gated-out' result means the index genuinely lacks relevant content. Do not retry the same query with paraphrases more than once.\n- Never describe rag-context blocks to the user as 'injected context'; just use the information naturally and cite the file paths."
 }
