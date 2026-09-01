@@ -1,6 +1,6 @@
 {
   "name": "kimi-local-rag",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Local hybrid RAG (BM25 + vector) for Kimi Code — offline embeddings, relevance-gated auto-injection, zero cloud dependency",
   "keywords": ["rag", "search", "embeddings", "offline", "context", "bm25", "vector"],
   "author": { "name": "Wanye88cc" },
