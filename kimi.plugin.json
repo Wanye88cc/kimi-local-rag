@@ -1,0 +1,36 @@
+{
+  "name": "kimi-local-rag",
+  "version": "0.1.0",
+  "description": "Local hybrid RAG (BM25 + vector) for Kimi Code — offline embeddings, relevance-gated auto-injection, zero cloud dependency",
+  "keywords": ["rag", "search", "embeddings", "offline", "context", "bm25", "vector"],
+  "author": { "name": "Wanye88cc" },
+  "homepage": "https://github.com/Wanye88cc/kimi-local-rag",
+  "license": "MIT",
+  "interface": {
+    "displayName": "Local RAG",
+    "shortDescription": "Offline hybrid search over your project with relevance-gated context injection",
+    "longDescription": "Index local files and search them with hybrid BM25 + vector similarity, fully offline (local ONNX embeddings, SQLite storage). Unlike naive RAG injectors, every chunk must pass an evidence gate — semantic floor, lexical coverage, or exact identifier match — before it is injected, so irrelevant context is never forced into the prompt.",
+    "developerName": "Wanye88cc",
+    "websiteURL": "https://github.com/Wanye88cc/kimi-local-rag"
+  },
+  "mcpServers": {
+    "local-rag": {
+      "command": "node",
+      "args": ["./src/mcp-server.mjs"]
+    }
+  },
+  "hooks": [
+    {
+      "event": "UserPromptSubmit",
+      "command": "node ./hooks/inject.mjs",
+      "timeout": 10
+    },
+    {
+      "event": "SessionStart",
+      "command": "node ./hooks/refresh.mjs",
+      "timeout": 10
+    }
+  ],
+  "commands": "./commands/",
+  "systemPrompt": "This environment has the kimi-local-rag plugin: a fully local hybrid (BM25 + vector) index of project files, searched offline with local embeddings.\n\nTools (MCP server `local-rag`): rag_index, rag_query, rag_status, rag_refresh, rag_rebuild, rag_clear, rag_exclude, rag_config. When you know the absolute project path, pass it as `dir` so the project-level store is used.\n\nGuidelines:\n- When the user's question may be covered by indexed local content (project docs, design notes, large codebases, PDF/DOCX material), prefer rag_query over blind repo-wide grep.\n- If rag_status shows an empty index and the project is large, suggest running rag_index on the project root.\n- The user's message may include a <rag-context> block of auto-retrieved local excerpts. Use them when relevant; silently ignore them when not.\n- Retrieval is evidence-gated: an empty or 'gated-out' result means the index genuinely lacks relevant content. Do not retry the same query with paraphrases more than once.\n- Never describe rag-context blocks to the user as 'injected context'; just use the information naturally and cite the file paths."
+}
