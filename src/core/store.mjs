@@ -15,12 +15,14 @@ export function kimiHome() {
  * Store resolution order:
  *   1. $KIMI_RAG_DIR
  *   2. explicit `dir` argument (a rag dir, or a project dir to walk up from)
- *   3. walk up from startDir looking for an existing `.kimi-code/rag/rag.db`
- *      (stops before $HOME)
- *   4. most recently used project store (written by the inject hook)
- *   5. for writes: create a project store at startDir; else: global store
+ *   3. walk up from startDir looking for an EXISTING `.kimi-code/rag/rag.db`
+ *      (stops before $HOME) — backward compat for deliberately project-local
+ *      stores created by older versions
+ *   4. the global store at ~/.kimi-code/rag — the default for reads AND writes.
+ *
+ * One index by default: everything you index is searchable from everywhere.
  */
-export function resolveStoreDir({ dir, startDir, forWrite = false } = {}) {
+export function resolveStoreDir({ dir, startDir } = {}) {
   if (process.env.KIMI_RAG_DIR) return process.env.KIMI_RAG_DIR;
 
   const start = dir || startDir || process.cwd();
@@ -39,42 +41,7 @@ export function resolveStoreDir({ dir, startDir, forWrite = false } = {}) {
     cur = path.dirname(cur);
   }
 
-  // Recently used project store (the hook sees every prompt's cwd)
-  const lastSeen = readLastProjectStore(start);
-  if (lastSeen) return lastSeen;
-
-  if (forWrite) return path.join(path.resolve(start), STORE_DIR_NAME);
   return path.join(kimiHome(), 'rag');
-}
-
-function lastProjectFile() {
-  return path.join(kimiHome(), 'rag-last-project.json');
-}
-
-export function rememberProjectStore(projectDir, storeDir) {
-  try {
-    fs.mkdirSync(kimiHome(), { recursive: true });
-    fs.writeFileSync(
-      lastProjectFile(),
-      JSON.stringify({ projectDir, storeDir, at: Date.now() })
-    );
-  } catch { /* best effort */ }
-}
-
-function readLastProjectStore(startDir) {
-  try {
-    const rec = JSON.parse(fs.readFileSync(lastProjectFile(), 'utf8'));
-    const fresh = Date.now() - rec.at < 24 * 3600 * 1000;
-    if (!fresh) return null;
-    if (!fs.existsSync(path.join(rec.storeDir, 'rag.db'))) return null;
-    // Only trust it when the caller is inside that project (or running from a
-    // plugin directory, where walk-up found nothing)
-    const rel = path.relative(rec.projectDir, path.resolve(startDir));
-    const inside = rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
-    return inside ? rec.storeDir : null;
-  } catch {
-    return null;
-  }
 }
 
 const SCHEMA = `

@@ -60,7 +60,7 @@ async function main() {
     return;
   }
 
-  const { RagStore, resolveStoreDir, rememberProjectStore } = await import('../src/core/store.mjs');
+  const { RagStore, resolveStoreDir } = await import('../src/core/store.mjs');
   const { search, formatInjection } = await import('../src/core/search.mjs');
   const { queryDaemon, ensureDaemon } = await import('../src/core/daemon-client.mjs');
 
@@ -78,7 +78,6 @@ async function main() {
 
   const storeDir = resolveStoreDir({ startDir: cwd });
   if (!fs.existsSync(path.join(storeDir, 'rag.db'))) return; // nothing indexed
-  rememberProjectStore(cwd, storeDir);
 
   const store = new RagStore(storeDir);
   store.reloadConfig();

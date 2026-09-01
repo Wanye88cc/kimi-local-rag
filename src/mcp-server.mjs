@@ -21,15 +21,15 @@ const { indexPaths, refresh } = await import('./core/indexer.mjs');
 const { search } = await import('./core/search.mjs');
 const { loadConfig, setConfigValue } = await import('./core/config.mjs');
 
-const server = new McpServer({ name: 'kimi-local-rag', version: '0.1.1' });
+const server = new McpServer({ name: 'kimi-local-rag', version: '0.2.0' });
 
 const dirParam = z
   .string()
   .optional()
-  .describe('Absolute project directory (or rag store dir). Defaults to auto-resolution: $KIMI_RAG_DIR, walk-up from cwd, then the most recently used project store, then the global store.');
+  .describe('Absolute project directory (or rag store dir). Optional — everything lives in one global store by default; pass this only to target a deliberately project-local store.');
 
-function openStoreFor(dir, forWrite = false) {
-  const storeDir = resolveStoreDir({ dir, forWrite });
+function openStoreFor(dir) {
+  const storeDir = resolveStoreDir({ dir });
   const store = new RagStore(storeDir);
   store.reloadConfig();
   return store;
@@ -46,7 +46,7 @@ server.registerTool(
     inputSchema: { path: z.string().describe('File or directory to index'), dir: dirParam },
   },
   async ({ path: target, dir }) => {
-    const store = openStoreFor(dir, true);
+    const store = openStoreFor(dir);
     try {
       const abs = path.resolve(dir || '.', target);
       if (!store.config.trackedPaths.includes(abs)) {
@@ -145,7 +145,7 @@ server.registerTool(
     inputSchema: { force: z.boolean().optional(), dir: dirParam },
   },
   async ({ force, dir }) => {
-    const store = openStoreFor(dir, true);
+    const store = openStoreFor(dir);
     try {
       if (force) {
         store.clearAll();
@@ -187,7 +187,7 @@ server.registerTool(
     },
   },
   async ({ pattern, remove, dir }) => {
-    const storeDir = resolveStoreDir({ dir, forWrite: true });
+    const storeDir = resolveStoreDir({ dir });
     const cfg = loadConfig(storeDir);
     if (!pattern) return json(cfg.excludePatterns);
     const set = new Set(cfg.excludePatterns);
@@ -209,7 +209,7 @@ server.registerTool(
     },
   },
   async ({ key, value, dir }) => {
-    const storeDir = resolveStoreDir({ dir, forWrite: true });
+    const storeDir = resolveStoreDir({ dir });
     if (!key) return json(loadConfig(storeDir));
     if (value === undefined) return json({ [key]: loadConfig(storeDir)[key] });
     const cfg = setConfigValue(storeDir, key, value);
