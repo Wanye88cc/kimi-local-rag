@@ -1,14 +1,27 @@
-import fs from 'node:fs';
 import path from 'node:path';
-import { RagStore, resolveStoreDir } from './core/store.mjs';
-import { indexPaths, refresh } from './core/indexer.mjs';
-import { search } from './core/search.mjs';
-import { loadConfig, setConfigValue, DEFAULT_CONFIG } from './core/config.mjs';
+import { fileURLToPath } from 'node:url';
+import { depsInstalled, ensureDeps } from './core/bootstrap.mjs';
 
 /**
  * CLI — usable by humans (`node src/cli.mjs ...`) and by hooks.
  * Every command accepts `--dir <projectOrRagDir>`.
  */
+
+const PLUGIN_ROOT = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
+if (!depsInstalled(PLUGIN_ROOT)) {
+  const started = ensureDeps(PLUGIN_ROOT);
+  console.error(started
+    ? 'Dependencies are installing in the background (first run) — retry in a minute.'
+    : 'Dependencies are not installed and npm could not be started — run `npm install` in the plugin directory.');
+  process.exit(1);
+}
+
+// Dynamic imports: a static import of better-sqlite3 would crash before the
+// friendly message above ever prints.
+const { RagStore, resolveStoreDir } = await import('./core/store.mjs');
+const { indexPaths, refresh } = await import('./core/indexer.mjs');
+const { search } = await import('./core/search.mjs');
+const { loadConfig, setConfigValue, DEFAULT_CONFIG } = await import('./core/config.mjs');
 
 function parseArgs(argv) {
   const args = [];

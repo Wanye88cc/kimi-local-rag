@@ -1,16 +1,25 @@
-import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { z } from 'zod';
-import { RagStore, resolveStoreDir } from './core/store.mjs';
-import { indexPaths, refresh } from './core/indexer.mjs';
-import { search } from './core/search.mjs';
-import { loadConfig, setConfigValue } from './core/config.mjs';
+import { depsInstalled, ensureDeps } from './core/bootstrap.mjs';
 
 const PLUGIN_ROOT = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
-const missingDeps = !fs.existsSync(path.join(PLUGIN_ROOT, 'node_modules', 'better-sqlite3'));
+
+// The MCP SDK itself lives in node_modules, so without dependencies we cannot
+// serve at all. Trigger the background bootstrap and exit cleanly — the hooks
+// do the same, and the server becomes available after the install finishes
+// (next session or /reload).
+if (!depsInstalled(PLUGIN_ROOT)) {
+  ensureDeps(PLUGIN_ROOT);
+  process.exit(0);
+}
+
+const { McpServer } = await import('@modelcontextprotocol/sdk/server/mcp.js');
+const { StdioServerTransport } = await import('@modelcontextprotocol/sdk/server/stdio.js');
+const { z } = await import('zod');
+const { RagStore, resolveStoreDir } = await import('./core/store.mjs');
+const { indexPaths, refresh } = await import('./core/indexer.mjs');
+const { search } = await import('./core/search.mjs');
+const { loadConfig, setConfigValue } = await import('./core/config.mjs');
 
 const server = new McpServer({ name: 'kimi-local-rag', version: '0.1.0' });
 
@@ -37,7 +46,6 @@ server.registerTool(
     inputSchema: { path: z.string().describe('File or directory to index'), dir: dirParam },
   },
   async ({ path: target, dir }) => {
-    if (missingDeps) return text('Dependencies not installed. Run `npm install` in the kimi-local-rag plugin directory first.');
     const store = openStoreFor(dir, true);
     try {
       const abs = path.resolve(dir || '.', target);
@@ -65,7 +73,6 @@ server.registerTool(
     },
   },
   async ({ query, topK, dir }) => {
-    if (missingDeps) return text('Dependencies not installed. Run `npm install` in the kimi-local-rag plugin directory first.');
     const store = openStoreFor(dir);
     try {
       const out = await search(store, query, { topK });
@@ -94,7 +101,6 @@ server.registerTool(
     inputSchema: { dir: dirParam },
   },
   async ({ dir }) => {
-    if (missingDeps) return text('Dependencies not installed. Run `npm install` in the kimi-local-rag plugin directory first.');
     const store = openStoreFor(dir);
     try {
       const s = store.stats();
@@ -123,7 +129,6 @@ server.registerTool(
     inputSchema: { dir: dirParam },
   },
   async ({ dir }) => {
-    if (missingDeps) return text('Dependencies not installed. Run `npm install` in the kimi-local-rag plugin directory first.');
     const store = openStoreFor(dir);
     try {
       return json(await refresh(store));
@@ -140,7 +145,6 @@ server.registerTool(
     inputSchema: { force: z.boolean().optional(), dir: dirParam },
   },
   async ({ force, dir }) => {
-    if (missingDeps) return text('Dependencies not installed. Run `npm install` in the kimi-local-rag plugin directory first.');
     const store = openStoreFor(dir, true);
     try {
       if (force) {
@@ -162,7 +166,6 @@ server.registerTool(
     inputSchema: { dir: dirParam },
   },
   async ({ dir }) => {
-    if (missingDeps) return text('Dependencies not installed. Run `npm install` in the kimi-local-rag plugin directory first.');
     const store = openStoreFor(dir);
     try {
       store.clearAll();

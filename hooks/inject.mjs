@@ -2,9 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { RagStore, resolveStoreDir, rememberProjectStore } from '../src/core/store.mjs';
-import { search, formatInjection } from '../src/core/search.mjs';
-import { queryDaemon, ensureDaemon } from '../src/core/daemon-client.mjs';
+import { depsInstalled, ensureDeps } from '../src/core/bootstrap.mjs';
 
 /**
  * UserPromptSubmit hook — auto-injection.
@@ -19,6 +17,10 @@ import { queryDaemon, ensureDaemon } from '../src/core/daemon-client.mjs';
  * Latency: the warm daemon answers semantically in <100 ms. If the daemon is
  * not running yet, we spawn it and serve a lexical-only (BM25) pass so this
  * turn still completes in ~300 ms.
+ *
+ * NOTE: heavy modules (store/search/daemon-client) are imported dynamically
+ * AFTER the dependency check — a static import of better-sqlite3 would crash
+ * the hook before the bootstrap ever runs.
  */
 
 const PLUGIN_ROOT = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -49,11 +51,18 @@ function hintOnce(msg) {
 }
 
 async function main() {
-  // Fail silently & fast when dependencies are missing (hook must never block)
-  if (!fs.existsSync(path.join(PLUGIN_ROOT, 'node_modules', 'better-sqlite3'))) {
-    hintOnce('[kimi-local-rag] dependencies missing — run `npm install` in the plugin directory to enable local RAG.\n');
+  // Dependencies missing? Bootstrap them in the background, skip this turn.
+  if (!depsInstalled(PLUGIN_ROOT)) {
+    const started = ensureDeps(PLUGIN_ROOT);
+    hintOnce(started
+      ? '[kimi-local-rag] first run — installing dependencies in the background; local RAG activates automatically in a minute or two.\n'
+      : '[kimi-local-rag] dependencies are still installing…\n');
     return;
   }
+
+  const { RagStore, resolveStoreDir, rememberProjectStore } = await import('../src/core/store.mjs');
+  const { search, formatInjection } = await import('../src/core/search.mjs');
+  const { queryDaemon, ensureDaemon } = await import('../src/core/daemon-client.mjs');
 
   const raw = await readStdin();
   let payload = {};
@@ -81,7 +90,6 @@ async function main() {
   // Fast path: warm daemon (semantic)
   const viaDaemon = await queryDaemon(storeDir, '/inject', { prompt }, 2500);
   if (viaDaemon) {
-    const cfg = store.config;
     store.close();
     if (viaDaemon.text) process.stdout.write(viaDaemon.text + '\n');
     return;

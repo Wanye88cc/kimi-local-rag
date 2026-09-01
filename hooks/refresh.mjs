@@ -2,13 +2,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { resolveStoreDir } from '../src/core/store.mjs';
-import { loadConfig } from '../src/core/config.mjs';
+import { depsInstalled, ensureDeps } from '../src/core/bootstrap.mjs';
 
 /**
  * SessionStart hook — if the index for this project is stale (>24h by
  * default), kick off an incremental refresh in a detached process so the
  * session is never blocked by re-embedding.
+ *
+ * Heavy modules are imported dynamically AFTER the dependency check so a
+ * fresh clone (no node_modules) bootstraps instead of crashing.
  */
 
 const PLUGIN_ROOT = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -30,7 +32,15 @@ async function readStdin(timeoutMs = 3000) {
 }
 
 async function main() {
-  if (!fs.existsSync(path.join(PLUGIN_ROOT, 'node_modules', 'better-sqlite3'))) return;
+  // Dependencies missing? Bootstrap them in the background; nothing else to do.
+  if (!depsInstalled(PLUGIN_ROOT)) {
+    ensureDeps(PLUGIN_ROOT);
+    return;
+  }
+
+  const { resolveStoreDir } = await import('../src/core/store.mjs');
+  const { loadConfig } = await import('../src/core/config.mjs');
+
   const raw = await readStdin();
   let payload = {};
   try {
