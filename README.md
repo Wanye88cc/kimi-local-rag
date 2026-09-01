@@ -28,6 +28,7 @@ Practical result: a question with no answer in the index injects **zero** contex
 - Per-project storage at `.kimi-code/rag/` (walk-up resolution), global fallback at `~/.kimi-code/rag/`
 - **Auto-injection** via a `UserPromptSubmit` hook, served by a warm background daemon (model stays loaded; the first prompt after idle falls back to a fast lexical-only pass)
 - **Auto-refresh** of stale indexes (>24 h) on session start, detached and non-blocking
+- **Self-bootstrapping** — dependencies install themselves in the background on first use, no manual `npm install`
 - 8 MCP tools (`rag_index`, `rag_query`, `rag_status`, `rag_refresh`, `rag_rebuild`, `rag_clear`, `rag_exclude`, `rag_config`)
 - Slash commands `/kimi-local-rag:rag-index`, `:rag-search`, `:rag-status`, `:rag-refresh`, `:rag-rebuild`, `:rag-clear`, `:rag-exclude`, `:rag-on`, `:rag-off`, `:rag-config`
 
@@ -44,11 +45,9 @@ In Kimi Code:
 /plugins install https://github.com/Wanye88cc/kimi-local-rag
 ```
 
-Then install the plugin's Node dependencies (the plugin manager does not run npm install):
+That's it. On the first prompt (or session start) the plugin notices its Node dependencies are missing and installs them **by itself, in the background** — a minute or two later everything is active. No manual `npm install` step.
 
-```sh
-cd ~/.kimi-code/plugins/managed/kimi-local-rag && npm install
-```
+> Why not bundled like Kimi's built-in plugins? Built-ins ship inside the CLI's own installation. Third-party plugins are plain git clones, and this plugin needs a platform-specific native module (better-sqlite3) — native binaries can't be pre-built into the repo for every OS/arch. So the plugin bootstraps itself on first use instead. If the machine is offline or npm is not on `PATH`, run `npm install` manually in `~/.kimi-code/plugins/managed/kimi-local-rag`.
 
 Finally `/reload` (or start a new session). The first indexing run downloads the embedding model; after that everything is offline.
 
