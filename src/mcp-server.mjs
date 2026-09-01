@@ -21,7 +21,7 @@ const { indexPaths, refresh } = await import('./core/indexer.mjs');
 const { search } = await import('./core/search.mjs');
 const { loadConfig, setConfigValue } = await import('./core/config.mjs');
 
-const server = new McpServer({ name: 'kimi-local-rag', version: '0.1.0' });
+const server = new McpServer({ name: 'kimi-local-rag', version: '0.1.1' });
 
 const dirParam = z
   .string()
